@@ -127,6 +127,7 @@ class Blockchain {
    * @param {*} star
    */
   async submitStar(address, message, signature, star) {
+    let errorLogs = [];
     let body;
     try {
       let messageTime, currentTime, timeDifference, timeElapsed;
@@ -139,9 +140,11 @@ class Blockchain {
       let verify = await bitcoinMessage.verify(message, address, signature);
       if (timeElapsed > 5) {
         console.log("submission timed out");
+        errorLogs.push("Message was signed more than 5min ago");
         return;
       } else if (!verify) {
         console.log("Invalid signature");
+        errorLogs.push("Please resign message");
         return;
       } else {
         let data = { owner: address, star };
@@ -150,6 +153,10 @@ class Blockchain {
     } catch (error) {
       console.log(error);
     } finally {
+      if (!body) {
+        console.log(errorLogs);
+        return;
+      }
       return this._addBlock(body);
     }
   }
