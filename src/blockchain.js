@@ -201,6 +201,36 @@ class Blockchain {
     }
   }
 
+  validateBlock(chain) {
+    let errorLog = [];
+    if (chain.length > 1) {
+      for (let i = 0; i < chain.length; i++) {
+        /* start loop from first block and compare preceding block hash 
+           with next block previousBlockHash 
+           */
+        let precedingBlock = this.chain[i];
+        let nextBlock = this.chain[i + 1];
+
+        // last block in the chain
+        if (nextBlock === undefined) {
+          return true;
+        }
+        // check every block on the chain
+        if (precedingBlock.hash === nextBlock.previousBlockHash) {
+          errorLog.push(true);
+        } else {
+          console.log(
+            `${precedingBlock.hash} is not equal to ${nextBlock.previousBlockHash}`
+          );
+          return false;
+        }
+      }
+    } else {
+      // when chain has just one block
+      return true;
+    }
+  }
+
   /**
    * This method will return a Promise that will resolve with the list of errors when validating the chain.
    * Steps to validate:
@@ -208,41 +238,18 @@ class Blockchain {
    * 2. Each Block should check the with the previousBlockHash
    */
   async validateChain() {
+    let isValid;
     try {
-      let errorLog = [];
       let chain = this.chain;
+      // when initializing chain
       if (!chain) {
         return true;
       }
-
-      if (chain.length > 1) {
-        for (let i = 0; i < chain.length; i++) {
-          /* start loop from first block and compare preceding block hash 
-           with next block previousBlockHash 
-           */
-          let precedingBlock = this.chain[i];
-          let nextBlock = this.chain[i + 1];
-
-          // last block in the chain
-          if (nextBlock === undefined) {
-            return true;
-          }
-          // check every block on the chain
-          if (precedingBlock.hash === nextBlock.previousBlockHash) {
-            errorLog.push(true);
-          } else {
-            console.log(
-              `${precedingBlock.hash} is not equal to ${nextBlock.previousBlockHash}`
-            );
-            return false;
-          }
-        }
-      } else {
-        // when chain has just one block
-        return true;
-      }
+      isValid = await this.validateBlock(chain);
     } catch (error) {
       console.log(error);
+    } finally {
+      return isValid;
     }
   }
 }
