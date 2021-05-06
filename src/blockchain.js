@@ -61,17 +61,28 @@ class Blockchain {
    * that this method is a private method.
    */
   async _addBlock(block) {
+    let isValid;
     try {
-      if (this.chain.length > 0) {
-        block.previousBlockHash = this.chain[this.chain.length - 1].hash;
-      }
       block.time = new Date().getTime().toString().slice(0, -3);
       block.height = this.chain.length;
       block.hash = await SHA256(JSON.stringify(block)).toString();
+      /* set previousBlockHash && start validating block 
+         after creating genesis block
+        */
+      if (this.chain.length > 0) {
+        //set previousBlockHash
+        block.previousBlockHash = this.chain[this.chain.length - 1].hash;
+        //validate chain
+        isValid = this.validateChain();
+        isValid
+          ? this.chain.push(block)
+          : console.log("invalid block detected");
+        return;
+      }
+      this.chain.push(block);
     } catch (error) {
       console.error(error);
     } finally {
-      this.chain.push(block);
       return block;
     }
   }
@@ -196,10 +207,43 @@ class Blockchain {
    * 1. You should validate each block using `validateBlock`
    * 2. Each Block should check the with the previousBlockHash
    */
-  validateChain() {
-    let self = this;
-    let errorLog = [];
-    return new Promise(async (resolve, reject) => {});
+  async validateChain() {
+    try {
+      let errorLog = [];
+      let chain = this.chain;
+      if (!chain) {
+        return true;
+      }
+
+      if (chain.length > 1) {
+        for (let i = 0; i < chain.length; i++) {
+          /* start loop from first block and compare preceding block hash 
+           with next block previousBlockHash 
+           */
+          let precedingBlock = this.chain[i];
+          let nextBlock = this.chain[i + 1];
+
+          // last block in the chain
+          if (nextBlock === undefined) {
+            return true;
+          }
+          // check every block on the chain
+          if (precedingBlock.hash === nextBlock.previousBlockHash) {
+            errorLog.push(true);
+          } else {
+            console.log(
+              `${precedingBlock.hash} is not equal to ${nextBlock.previousBlockHash}`
+            );
+            return false;
+          }
+        }
+      } else {
+        // when chain has just one block
+        return true;
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
 
