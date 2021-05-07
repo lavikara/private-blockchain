@@ -138,7 +138,7 @@ class Blockchain {
       let minutes = "0" + date.getMinutes();
       timeElapsed = minutes.substr(-2);
       let verify = await bitcoinMessage.verify(message, address, signature);
-      if (timeElapsed > 5) {
+      if (timeElapsed > 120) {
         console.log("submission timed out");
         errorLogs.push("Message was signed more than 5min ago");
         return;
@@ -167,9 +167,14 @@ class Blockchain {
    * Search on the chain array for the block that has the hash.
    * @param {*} hash
    */
-  getBlockByHash(hash) {
-    let self = this;
-    return new Promise((resolve, reject) => {});
+  async getBlockByHash(hash) {
+    let block;
+    for (var i = 0; i < this.chain.length; i++) {
+      if (this.chain[i].hash === hash) {
+        block = await this.chain[i];
+        return block;
+      }
+    }
   }
 
   /**
