@@ -130,20 +130,16 @@ class Blockchain {
     let errorLogs = [];
     let body;
     try {
-      let messageTime, currentTime, timeDifference, timeElapsed;
+      let messageTime, currentTime, timeElapsed;
       messageTime = message.split(":")[1];
       currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
-      timeDifference = currentTime - messageTime;
-      let date = new Date(timeDifference * 1000);
-      let minutes = "0" + date.getMinutes();
-      timeElapsed = minutes.substr(-2);
+      timeElapsed = currentTime - messageTime;
       let verify = await bitcoinMessage.verify(message, address, signature);
-      if (timeElapsed > 120) {
+      if (timeElapsed >= 5 * 60) {
         console.log("submission timed out");
         errorLogs.push("Message was signed more than 5min ago");
         return;
       } else if (!verify) {
-        console.log("Invalid signature");
         errorLogs.push("Please resign message");
         return;
       } else {
