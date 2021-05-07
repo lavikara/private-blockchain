@@ -202,9 +202,11 @@ class Blockchain {
   async getStarsByWalletAddress(address) {
     let stars = [];
     try {
-      await this.chain.map((block) => {
-        let body = JSON.parse(Buffer.from(block.body, "hex").toString());
-        body.data.owner === address ? stars.push(body.data) : "";
+      await this.chain.map((block, index) => {
+        let data = block.getBData();
+        if (index > 0) {
+          data.data.owner === address ? stars.push(data) : "";
+        }
       });
     } catch (error) {
       console.log(error);
