@@ -61,25 +61,21 @@ class Blockchain {
    * that this method is a private method.
    */
   async _addBlock(block) {
-    let isValid;
     try {
-      block.time = new Date().getTime().toString().slice(0, -3);
-      block.height = this.chain.length;
-      block.hash = await SHA256(JSON.stringify(block)).toString();
-      /* set previousBlockHash && start validating block 
-         after creating genesis block
-        */
       if (this.chain.length > 0) {
-        //set previousBlockHash
+        block.time = new Date().getTime().toString().slice(0, -3);
+        block.height = this.chain.length;
         block.previousBlockHash = this.chain[this.chain.length - 1].hash;
+        block.hash = await SHA256(JSON.stringify(block)).toString();
         //validate chain
-        isValid = this.validateChain();
-        isValid
-          ? this.chain.push(block)
-          : console.log("invalid block detected");
+        this.validateChain(block);
         return;
+      } else {
+        block.time = new Date().getTime().toString().slice(0, -3);
+        block.height = this.chain.length;
+        block.hash = await SHA256(JSON.stringify(block)).toString();
+        this.chain.push(block);
       }
-      this.chain.push(block);
     } catch (error) {
       console.error(error);
     } finally {
@@ -128,7 +124,7 @@ class Blockchain {
    */
   async submitStar(address, message, signature, star) {
     let errorLogs = [];
-    let body;
+    let block;
     try {
       let messageTime, currentTime, timeElapsed;
       messageTime = message.split(":")[1];
@@ -136,24 +132,24 @@ class Blockchain {
       timeElapsed = currentTime - messageTime;
       let verify = await bitcoinMessage.verify(message, address, signature);
       if (timeElapsed >= 5 * 60) {
-        console.log("submission timed out");
-        errorLogs.push("Message was signed more than 5min ago");
+        errorLogs.push(
+          "submission timed out, message was signed more than 5min ago"
+        );
         return;
       } else if (!verify) {
-        errorLogs.push("Please resign message");
+        errorLogs.push("signature don't match, please resign message");
         return;
       } else {
-        let data = { owner: address, star };
-        body = new BlockClass.Block({ data });
+        block = new BlockClass.Block({ owner: address, star });
       }
     } catch (error) {
       console.log(error);
     } finally {
-      if (!body) {
+      if (!block) {
         console.log(errorLogs);
         return;
       }
-      return this._addBlock(body);
+      return this._addBlock(block);
     }
   }
 
@@ -201,7 +197,7 @@ class Blockchain {
       await this.chain.map((block, index) => {
         let data = block.getBData();
         if (index > 0) {
-          data.data.owner === address ? stars.push(data) : "";
+          data.owner === address ? stars.push(data) : "";
         }
       });
     } catch (error) {
@@ -211,55 +207,49 @@ class Blockchain {
     }
   }
 
-  validateBlock(chain) {
-    let errorLog = [];
-    if (chain.length > 1) {
-      for (let i = 0; i < chain.length; i++) {
-        /* start loop from first block and compare preceding block hash 
-           with next block previousBlockHash 
-           */
-        let precedingBlock = this.chain[i];
-        let nextBlock = this.chain[i + 1];
-
-        // last block in the chain
-        if (nextBlock === undefined) {
-          return true;
-        }
-        // check every block on the chain
-        if (precedingBlock.hash === nextBlock.previousBlockHash) {
-          errorLog.push(true);
-        } else {
-          console.log(
-            `${precedingBlock.hash} is not equal to ${nextBlock.previousBlockHash}`
-          );
-          return false;
-        }
-      }
-    } else {
-      // when chain has just one block
-      return true;
-    }
-  }
-
   /**
    * This method will return a Promise that will resolve with the list of errors when validating the chain.
    * Steps to validate:
    * 1. You should validate each block using `validateBlock`
    * 2. Each Block should check the with the previousBlockHash
    */
-  async validateChain() {
-    let isValid;
+  async validateChain(block) {
+    let errorLogs = [];
+    let isValidBlock;
     try {
       let chain = this.chain;
-      // when initializing chain
-      if (!chain) {
-        return true;
-      }
-      isValid = await this.validateBlock(chain);
+      let lastBlock = chain.length - 1;
+      await chain.map(async (block, index) => {
+        if (index === lastBlock) {
+          return;
+        }
+        let blockHash = chain[index].hash;
+        let previousBlockHash = chain[index + 1].previousBlockHash;
+        // validate blocks with validate method
+        isValidBlock = await block.validate();
+        errorLogs.push(isValidBlock);
+        if (!isValidBlock) {
+          console.log(`Block height ${block.height} is not valid`);
+          return;
+        } else if (previousBlockHash !== blockHash) {
+          console.log(`Block height ${block.height} previous hash don't match`);
+          isValidBlock = fslse;
+          return;
+        }
+      });
     } catch (error) {
       console.log(error);
     } finally {
-      return isValid;
+      if (!block) {
+        let valid = await errorLogs;
+        if (valid.includes(false) === true) {
+          return false;
+        } else {
+          return true;
+        }
+      } else {
+        this.chain.push(block);
+      }
     }
   }
 }
