@@ -233,7 +233,7 @@ class Blockchain {
           return;
         } else if (previousBlockHash !== blockHash) {
           console.log(`Block height ${block.height} previous hash don't match`);
-          isValidBlock = fslse;
+          isValidBlock = false;
           return;
         }
       });
